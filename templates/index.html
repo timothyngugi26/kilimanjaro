@@ -4,26 +4,44 @@
 <div class="row">
     <!-- Menu Section -->
     <div class="col-md-8">
-        <h2>Menu</h2>
-        <p class="text-muted">Click on items to add them to your order</p>
+        <h2 class="mb-4">🍽️ Our Delicious Menu</h2>
         
         <div class="row">
             {% for item in menu_items %}
-            <div class="col-md-6 mb-4">
-                <div class="card menu-item" style="border-left: 4px solid {{ item.color }};">
-                    <div class="card-body text-center">
-                        <div class="emoji" style="font-size: 3rem;">{{ item.emoji }}</div>
-                        <h5 class="card-title">{{ item.name }}</h5>
-                        <p class="card-text text-success fw-bold">${{ "%.2f"|format(item.price) }}</p>
-                        {% if current_user.is_authenticated %}
-                        <button class="btn btn-primary add-to-cart" data-item-id="{{ item.id }}">
-                            Add to Order
-                        </button>
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card menu-item h-100 shadow-sm">
+                    <!-- Food Photo -->
+                    <div class="food-image-container">
+                        <img src="{{ url_for('static', filename='images/food/' + item.name|lower|replace(' ', '_') + '.jpg') }}" 
+                             alt="{{ item.name }}" 
+                             class="card-img-top food-image"
+                             onerror="this.src='{{ url_for('static', filename='images/food/placeholder.jpg') }}'">
+                        <div class="food-emoji">{{ item.emoji }}</div>
+                    </div>
+                    
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">{{ item.name }}</h5>
+                            <span class="badge bg-success fs-6">${{ "%.2f"|format(item.price) }}</span>
+                        </div>
+                        
+                        {% if item.description %}
+                        <p class="card-text text-muted small flex-grow-1">{{ item.description }}</p>
                         {% else %}
-                        <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
-                            Login to Order
-                        </a>
+                        <p class="card-text text-muted small flex-grow-1">Delicious {{ item.name }} made with fresh ingredients</p>
                         {% endif %}
+                        
+                        <div class="mt-auto">
+                            {% if current_user.is_authenticated %}
+                            <button class="btn btn-primary w-100 add-to-cart" data-item-id="{{ item.id }}">
+                                <i class="fas fa-plus me-2"></i>Add to Order
+                            </button>
+                            {% else %}
+                            <a href="{{ url_for('login') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-sign-in-alt me-2"></i>Login to Order
+                            </a>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -33,11 +51,11 @@
 
     <!-- Order Summary - Updated to show cart items -->
     <div class="col-md-4">
-        <div class="card sticky-top" style="top: 20px;">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">Your Order</h4>
+        <div class="card sticky-top shadow" style="top: 20px;">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">🛒 Your Order</h4>
                 {% if session.cart %}
-                <span class="badge bg-primary rounded-pill" id="cart-count">
+                <span class="badge bg-warning rounded-pill fs-6" id="cart-count">
                     {{ session.cart.values()|sum }}
                 </span>
                 {% endif %}
@@ -63,41 +81,43 @@
                         
                         {% for cart_item in cart_items %}
                         <div class="order-item mb-3 p-3 border rounded" id="cart-item-{{ cart_item.item.id }}">
-                            <div class="d-flex justify-content-between align-items-start">
+                            <div class="d-flex align-items-start">
+                                <img src="{{ url_for('static', filename='images/food/' + cart_item.item.name|lower|replace(' ', '_') + '.jpg') }}" 
+                                     alt="{{ cart_item.item.name }}" 
+                                     class="cart-item-image me-3"
+                                     onerror="this.src='{{ url_for('static', filename='images/food/placeholder.jpg') }}'">
                                 <div class="flex-grow-1">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="emoji me-2">{{ cart_item.item.emoji }}</span>
-                                        <strong>{{ cart_item.item.name }}</strong>
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <strong class="cart-item-name">{{ cart_item.item.name }}</strong>
+                                        <span class="text-success fw-bold">${{ "%.2f"|format(cart_item.item_total) }}</span>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="quantity-controls">
                                             <button class="btn btn-sm btn-outline-secondary decrease-quantity" 
                                                     data-item-id="{{ cart_item.item.id }}">
-                                                -
+                                                <i class="fas fa-minus"></i>
                                             </button>
-                                            <span class="mx-2 fw-bold">{{ cart_item.quantity }}</span>
+                                            <span class="mx-2 fw-bold fs-6">{{ cart_item.quantity }}</span>
                                             <button class="btn btn-sm btn-outline-secondary increase-quantity" 
                                                     data-item-id="{{ cart_item.item.id }}">
-                                                +
+                                                <i class="fas fa-plus"></i>
                                             </button>
                                         </div>
-                                        <div class="text-end">
-                                            <div class="text-success fw-bold">${{ "%.2f"|format(cart_item.item_total) }}</div>
-                                            <small class="text-muted">${{ "%.2f"|format(cart_item.item.price) }} each</small>
-                                        </div>
+                                        <button class="btn btn-sm btn-outline-danger remove-item" 
+                                                data-item-id="{{ cart_item.item.id }}" title="Remove item">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     </div>
                                 </div>
-                                <button class="btn btn-sm btn-outline-danger ms-2 remove-item" 
-                                        data-item-id="{{ cart_item.item.id }}" title="Remove item">
-                                    ×
-                                </button>
                             </div>
                         </div>
                         {% endfor %}
                     {% else %}
                         <div class="text-center py-4">
-                            <div class="emoji" style="font-size: 2rem;">🛒</div>
-                            <p class="text-muted mt-2">Your cart is empty</p>
+                            <div class="empty-cart-icon mb-3">
+                                <i class="fas fa-shopping-cart fa-3x text-muted"></i>
+                            </div>
+                            <p class="text-muted">Your cart is empty</p>
                             <p class="text-muted small">Add items from the menu to see them here</p>
                         </div>
                     {% endif %}
@@ -109,24 +129,22 @@
                         <span>Subtotal:</span>
                         <span class="fw-bold">${{ "%.2f"|format(total) }}</span>
                     </div>
-                    {% if delivery_fee %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span>Delivery Fee:</span>
-                        <span class="fw-bold">${{ "%.2f"|format(delivery_fee) }}</span>
+                        <span class="fw-bold" id="delivery-fee-display">$2.99</span>
                     </div>
-                    {% endif %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span><strong>Total:</strong></span>
-                        <span class="text-success fw-bold fs-5">${{ "%.2f"|format(total + (delivery_fee or 0)) }}</span>
+                        <span class="text-success fw-bold fs-5">${{ "%.2f"|format(total + 2.99) }}</span>
                     </div>
                 </div>
 
                 <div class="mt-3 d-grid gap-2">
                     <a href="{{ url_for('checkout') }}" class="btn btn-success btn-lg">
-                        🛍️ Proceed to Checkout
+                        <i class="fas fa-credit-card me-2"></i>Proceed to Checkout
                     </a>
                     <button class="btn btn-outline-danger" onclick="clearCart()">
-                        🗑️ Clear Cart
+                        <i class="fas fa-trash me-2"></i>Clear Cart
                     </button>
                 </div>
                 {% else %}
@@ -137,11 +155,17 @@
                 
                 {% else %}
                 <div class="text-center py-4">
-                    <div class="emoji" style="font-size: 2rem;">🔐</div>
-                    <p class="text-muted mt-2">Please login to start ordering</p>
+                    <div class="mb-3">
+                        <i class="fas fa-lock fa-2x text-muted"></i>
+                    </div>
+                    <p class="text-muted">Please login to start ordering</p>
                     <div class="d-grid gap-2">
-                        <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
-                        <a href="{{ url_for('register') }}" class="btn btn-outline-primary">Register</a>
+                        <a href="{{ url_for('login') }}" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </a>
+                        <a href="{{ url_for('register') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-user-plus me-2"></i>Register
+                        </a>
                     </div>
                 </div>
                 {% endif %}
@@ -155,7 +179,7 @@
      role="alert" aria-live="assertive" aria-atomic="true" id="feedbackToast">
     <div class="d-flex">
         <div class="toast-body" id="toastMessage">
-            Item added to cart!
+            <i class="fas fa-check-circle me-2"></i>Item added to cart!
         </div>
         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
@@ -163,7 +187,11 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Include Font Awesome for icons -->
+<script src="https://kit.fontawesome.com/your-font-awesome-kit.js" crossorigin="anonymous"></script>
+
 <script>
+// Your existing JavaScript functions remain the same
 document.addEventListener('DOMContentLoaded', function() {
     const feedbackToast = new bootstrap.Toast(document.getElementById('feedbackToast'));
     
@@ -204,6 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Your existing addToCart, updateCartQuantity, removeFromCart, clearCart functions...
 function addToCart(itemId, quantity = 1) {
     fetch('/add_to_cart', {
         method: 'POST',
@@ -263,15 +292,15 @@ function removeFromCart(itemId) {
             },
             body: JSON.stringify({ item_id: itemId })
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showFeedback('Item removed from cart');
-                setTimeout(() => {
-                    location.reload();
-                }, 800);
-            }
-        });
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showFeedback('Item removed from cart');
+            setTimeout(() => {
+                location.reload();
+            }, 800);
+        }
+    });
     }
 }
 
@@ -296,7 +325,6 @@ function showFeedback(message, type = 'success') {
     const toast = document.getElementById('feedbackToast');
     const toastMessage = document.getElementById('toastMessage');
     
-    // Update toast style based on type
     if (type === 'danger') {
         toast.classList.remove('bg-success');
         toast.classList.add('bg-danger');
@@ -305,7 +333,7 @@ function showFeedback(message, type = 'success') {
         toast.classList.add('bg-success');
     }
     
-    toastMessage.textContent = message;
+    toastMessage.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}`;
     bootstrap.Toast.getOrCreateInstance(toast).show();
 }
 </script>
@@ -313,29 +341,79 @@ function showFeedback(message, type = 'success') {
 <style>
 .menu-item {
     transition: all 0.3s ease;
-    cursor: pointer;
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
 }
 
 .menu-item:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
 }
 
-.order-item {
-    transition: all 0.2s ease;
+.food-image-container {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
 }
 
-.order-item:hover {
-    background-color: #f8f9fa;
+.food-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.menu-item:hover .food-image {
+    transform: scale(1.05);
+}
+
+.food-emoji {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    backdrop-filter: blur(10px);
+}
+
+.cart-item-image {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+}
+
+.cart-item-name {
+    font-size: 0.9rem;
+    line-height: 1.2;
 }
 
 .quantity-controls .btn {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 8px;
+}
+
+.order-item {
+    transition: all 0.2s ease;
+    border-radius: 12px;
+}
+
+.order-item:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
 }
 
 .sticky-top {
@@ -343,8 +421,44 @@ function showFeedback(message, type = 'success') {
     z-index: 100;
 }
 
-.emoji {
-    font-size: 1.5rem;
+.empty-cart-icon {
+    opacity: 0.5;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+.btn {
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.badge {
+    font-size: 0.8em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .food-image-container {
+        height: 160px;
+    }
+    
+    .cart-item-image {
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* Animation for cart updates */
+@keyframes cartPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.cart-update {
+    animation: cartPulse 0.3s ease-in-out;
 }
 </style>
 {% endblock %}

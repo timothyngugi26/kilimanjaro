@@ -81,14 +81,70 @@ def load_user(user_id):
 def init_menu_items():
     if MenuItem.query.count() == 0:
         menu_items = [
-            MenuItem(name="Burger", price=9.99, emoji="🍔", color="#FF6B35", category="Main"),
-            MenuItem(name="Pizza", price=15.99, emoji="🍕", color="#F7C59F", category="Main"),
-            MenuItem(name="Pasta", price=11.99, emoji="🍝", color="#EFEFD0", category="Main"),
-            MenuItem(name="Salad", price=8.99, emoji="🥗", color="#A7C957", category="Main"),
-            MenuItem(name="Soda", price=2.99, emoji="🥤", color="#00A8E8", category="Drink"),
-            MenuItem(name="Fries", price=3.99, emoji="🍟", color="#FF9E00", category="Side"),
-            MenuItem(name="Ice Cream", price=4.99, emoji="🍦", color="#FFE5D9", category="Dessert"),
-            MenuItem(name="Tea", price=20.00, emoji="🍵", color="#D4E6B3", category="Drink")
+            MenuItem(
+                name="Burger", 
+                price=9.99, 
+                emoji="🍔", 
+                color="#FF6B35", 
+                category="Main",
+                description="Juicy beef patty with fresh lettuce, tomato, and our special sauce"
+            ),
+            MenuItem(
+                name="Pizza", 
+                price=15.99, 
+                emoji="🍕", 
+                color="#F7C59F", 
+                category="Main",
+                description="Freshly baked with mozzarella, pepperoni, and your choice of toppings"
+            ),
+            MenuItem(
+                name="Pasta", 
+                price=11.99, 
+                emoji="🍝", 
+                color="#EFEFD0", 
+                category="Main",
+                description="Homemade pasta with rich tomato sauce and parmesan cheese"
+            ),
+            MenuItem(
+                name="Salad", 
+                price=8.99, 
+                emoji="🥗", 
+                color="#A7C957", 
+                category="Main",
+                description="Fresh garden greens with seasonal vegetables and light dressing"
+            ),
+            MenuItem(
+                name="Soda", 
+                price=2.99, 
+                emoji="🥤", 
+                color="#00A8E8", 
+                category="Drink",
+                description="Refreshing carbonated beverage, various flavors available"
+            ),
+            MenuItem(
+                name="Fries", 
+                price=3.99, 
+                emoji="🍟", 
+                color="#FF9E00", 
+                category="Side",
+                description="Crispy golden fries with a pinch of sea salt"
+            ),
+            MenuItem(
+                name="Ice Cream", 
+                price=4.99, 
+                emoji="🍦", 
+                color="#FFE5D9", 
+                category="Dessert",
+                description="Creamy vanilla ice cream with your choice of toppings"
+            ),
+            MenuItem(
+                name="Tea", 
+                price=20.00, 
+                emoji="🍵", 
+                color="#D4E6B3", 
+                category="Drink",
+                description="Premium tea selection, brewed to perfection"
+            )
         ]
         db.session.bulk_save_objects(menu_items)
         db.session.commit()
@@ -263,10 +319,13 @@ def checkout():
                          cart_items=cart_items, 
                          total=total,
                          delivery_fee=delivery_fee)
+
 @app.route('/order/<int:order_id>')
 @login_required
 def order_confirmation(order_id):
     order = Order.query.get_or_404(order_id)
+    
+    # Security check - users can only see their own orders unless they're staff
     if order.user_id != current_user.id and current_user.role not in ['kitchen', 'admin']:
         flash('Access denied', 'danger')
         return redirect(url_for('index'))

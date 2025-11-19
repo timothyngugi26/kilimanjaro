@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Order Confirmation - Food Ordering System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-check-circle fa-2x me-3"></i>
+                    <h3 class="mb-0">Order Confirmed!</h3>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <h5>Thank you for your order, {{ current_user.name }}!</h5>
+                    <p class="mb-0">Your order has been received and is being prepared.</p>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-receipt me-2"></i>Order Details</h5>
+                        <div class="mb-3">
+                            <strong>Order Number:</strong><br>
+                            <span class="fs-5 text-primary">{{ order.order_number }}</span>
+                        </div>
+                        <p><strong><i class="fas fa-clock me-2"></i>Order Time:</strong> {{ order.order_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <p><strong><i class="fas fa-hourglass-half me-2"></i>Expected Ready:</strong> {{ order.expected_ready_time }}</p>
+                        <p><strong><i class="fas fa-money-bill-wave me-2"></i>Total Amount:</strong> 
+                            <span class="fs-5 text-success">${{ "%.2f"|format(order.total_amount) }}</span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-truck me-2"></i>Delivery Information</h5>
+                        <p><strong>Method:</strong> 
+                            <span class="badge {% if order.delivery_option == 'delivery' %}bg-primary{% else %}bg-info{% endif %}">
+                                {{ order.delivery_option.title() }}
+                            </span>
+                        </p>
+                        {% if order.delivery_option == 'delivery' %}
+                        <p><strong><i class="fas fa-map-marker-alt me-2"></i>Address:</strong><br>{{ order.delivery_address }}</p>
+                        {% else %}
+                        <p><strong><i class="fas fa-store me-2"></i>Pickup Time:</strong> {{ order.pickup_time }}</p>
+                        {% endif %}
+                        
+                        {% if order.special_instructions %}
+                        <p><strong><i class="fas fa-sticky-note me-2"></i>Special Instructions:</strong><br>{{ order.special_instructions }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <h5><i class="fas fa-utensils me-2"></i>Order Items</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order_item in order.order_items %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="food-emoji-small me-2">
+                                                {% if order_item.menu_item_name == 'Burger' %}🍔
+                                                {% elif order_item.menu_item_name == 'Pizza' %}🍕
+                                                {% elif order_item.menu_item_name == 'Pasta' %}🍝
+                                                {% elif order_item.menu_item_name == 'Salad' %}🥗
+                                                {% elif order_item.menu_item_name == 'Soda' %}🥤
+                                                {% elif order_item.menu_item_name == 'Fries' %}🍟
+                                                {% elif order_item.menu_item_name == 'Ice Cream' %}🍦
+                                                {% elif order_item.menu_item_name == 'Tea' %}🍵
+                                                {% else %}🍽️{% endif %}
+                                            </div>
+                                            {{ order_item.menu_item_name }}
+                                        </div>
+                                    </td>
+                                    <td>{{ order_item.quantity }}</td>
+                                    <td>${{ "%.2f"|format(order_item.unit_price) }}</td>
+                                    <td><strong>${{ "%.2f"|format(order_item.item_total) }}</strong></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-success">
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                    <td><strong>${{ "%.2f"|format(order.total_amount) }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-4 bg-light rounded">
+                    <h6><i class="fas fa-info-circle me-2"></i>What's Next?</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="fas fa-mobile-alt text-primary me-2"></i>
+                                    You will receive an M-Pesa payment prompt shortly
+                                </li>
+                                <li class="mb-2">
+                                    <i class="fas fa-utensils text-warning me-2"></i>
+                                    Our kitchen will start preparing your order
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="fas fa-bell text-success me-2"></i>
+                                    We'll notify you when your order is ready
+                                </li>
+                                {% if order.delivery_option == 'delivery' %}
+                                <li class="mb-2">
+                                    <i class="fas fa-motorcycle text-info me-2"></i>
+                                    Your order will be delivered to the provided address
+                                </li>
+                                {% else %}
+                                <li class="mb-2">
+                                    <i class="fas fa-store text-info me-2"></i>
+                                    You can pick up your order at the specified time
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg me-md-2">
+                        <i class="fas fa-plus-circle me-2"></i>Place Another Order
+                    </a>
+                    <a href="{{ url_for('kitchen_dashboard') if current_user.role in ['kitchen', 'admin'] else url_for('index') }}" 
+                       class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-eye me-2"></i>View Kitchen Dashboard
+                    </a>
+                </div>
+
+                <!-- Order Status Progress -->
+                <div class="mt-5">
+                    <h6><i class="fas fa-tasks me-2"></i>Order Status</h6>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 25%;" 
+                             aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2 text-center">
+                        <div>
+                            <i class="fas fa-check-circle text-success fa-2x"></i>
+                            <div class="small mt-1">Ordered</div>
+                        </div>
+                        <div>
+                            <i class="fas fa-utensils text-muted fa-2x"></i>
+                            <div class="small mt-1">Preparing</div>
+                        </div>
+                        <div>
+                            <i class="fas fa-check text-muted fa-2x"></i>
+                            <div class="small mt-1">Ready</div>
+                        </div>
+                        <div>
+                            <i class="fas fa-flag-checkered text-muted fa-2x"></i>
+                            <div class="small mt-1">Completed</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.food-emoji-small {
+    font-size: 1.2rem;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.1);
+    border-radius: 50%;
+}
+
+.card {
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.alert-success {
+    border-radius: 10px;
+    border-left: 5px solid #28a745;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.btn-lg {
+    border-radius: 10px;
+    padding: 12px 30px;
+    font-weight: 600;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add some interactive elements
+    const progressBar = document.querySelector('.progress-bar');
+    
+    // Simulate progress animation
+    setTimeout(() => {
+        progressBar.style.width = '50%';
+        progressBar.classList.remove('bg-success');
+        progressBar.classList.add('bg-warning');
+    }, 2000);
+    
+    // Print order functionality
+    const printOrder = () => {
+        window.print();
+    };
+    
+    // Add print button if needed
+    const printBtn = document.createElement('button');
+    printBtn.className = 'btn btn-outline-primary btn-lg';
+    printBtn.innerHTML = '<i class="fas fa-print me-2"></i>Print Receipt';
+    printBtn.onclick = printOrder;
+    document.querySelector('.d-grid').appendChild(printBtn);
+});
+</script>
+{% endblock %}
