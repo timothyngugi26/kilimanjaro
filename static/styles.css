@@ -1,0 +1,46 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.menu-item {
+    transition: transform 0.2s ease-in-out;
+    cursor: pointer;
+    border-left: 4px solid #007bff;
+}
+
+.menu-item:hover {
+    transform: translateY(-5px);
+}
+
+.emoji {
+    font-size: 2rem;
+}
+
+.order-item {
+    background-color: #f8f9fa;
+}
+
+.toast {
+    z-index: 1055;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn {
+    border-radius: 8px;
+}
+
+.form-control {
+    border-radius: 8px;
+}
+
+.order-card {
+    transition: all 0.3s ease;
+}
+
+.order-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Kitchen Dashboard - Food Ordering System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>👨‍🍳 Kitchen Dashboard</h1>
+        <div>
+            <a href="{{ url_for('kitchen_analytics') }}" class="btn btn-info">Analytics</a>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Customer View</a>
+        </div>
+    </div>
+
+    <!-- Status Summary -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Pending</h5>
+                    <h2 class="card-text">{{ active_orders.values()|selectattr('status', 'equalto', 'pending')|list|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Preparing</h5>
+                    <h2 class="card-text">{{ active_orders.values()|selectattr('status', 'equalto', 'preparing')|list|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Ready</h5>
+                    <h2 class="card-text">{{ active_orders.values()|selectattr('status', 'equalto', 'ready')|list|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-secondary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Today</h5>
+                    <h2 class="card-text">{{ completed_orders|length + active_orders|length }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Orders -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Active Orders</h4>
+                </div>
+                <div class="card-body">
+                    {% if active_orders %}
+                    <div class="row">
+                        {% for order_id, order in active_orders.items() %}
+                        <div class="col-md-6 mb-4">
+                            <div class="card order-card 
+                                {% if order.status == 'pending' %}border-warning
+                                {% elif order.status == 'preparing' %}border-primary
+                                {% elif order.status == 'ready' %}border-success{% endif %}">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <strong>Order #{{ order_id }}</strong>
+                                    <span class="badge 
+                                        {% if order.status == 'pending' %}bg-warning
+                                        {% elif order.status == 'preparing' %}bg-primary
+                                        {% elif order.status == 'ready' %}bg-success{% endif %}">
+                                        {{ statuses[order.status] }}
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-1"><strong>Customer:</strong> {{ order.customer_name }}</p>
+                                    <p class="mb-1"><strong>Phone:</strong> {{ order.phone }}</p>
+                                    <p class="mb-2"><strong>Order Time:</strong> {{ order.order_time }}</p>
+                                    
+                                    <h6>Items:</h6>
+                                    <ul class="list-unstyled">
+                                        {% for item, quantity in order.items.items() %}
+                                        <li>{{ emojis[item] }} {{ item }} x {{ quantity }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <strong class="text-success">${{ "%.2f"|format(order.total) }}</strong>
+                                        <div>
+                                            <a href="{{ url_for('kitchen_order_detail', order_id=order_id) }}" 
+                                               class="btn btn-sm btn-outline-primary">Details</a>
+                                            
+                                            {% if order.status == 'pending' %}
+                                            <button class="btn btn-sm btn-primary update-status" 
+                                                    data-order-id="{{ order_id }}" 
+                                                    data-status="preparing">
+                                                Start Preparing
+                                            </button>
+                                            {% elif order.status == 'preparing' %}
+                                            <button class="btn btn-sm btn-success update-status" 
+                                                    data-order-id="{{ order_id }}" 
+                                                    data-status="ready">
+                                                Mark Ready
+                                            </button>
+                                            {% elif order.status == 'ready' %}
+                                            <button class="btn btn-sm btn-secondary update-status" 
+                                                    data-order-id="{{ order_id }}" 
+                                                    data-status="completed">
+                                                Complete
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No active orders</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Update Modal -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Order Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="statusForm">
+                    <input type="hidden" id="modalOrderId">
+                    <input type="hidden" id="modalNewStatus">
+                    <div class="mb-3">
+                        <label for="statusNote" class="form-label">Note (Optional)</label>
+                        <textarea class="form-control" id="statusNote" rows="3" 
+                                 placeholder="Add any notes..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmStatusUpdate">Update Status</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update order status
+    const updateButtons = document.querySelectorAll('.update-status');
+    const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+    
+    updateButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const orderId = this.dataset.orderId;
+            const newStatus = this.dataset.status;
+            
+            document.getElementById('modalOrderId').value = orderId;
+            document.getElementById('modalNewStatus').value = newStatus;
+            statusModal.show();
+        });
+    });
+    
+    // Confirm status update
+    document.getElementById('confirmStatusUpdate').addEventListener('click', function() {
+        const orderId = document.getElementById('modalOrderId').value;
+        const newStatus = document.getElementById('modalNewStatus').value;
+        const note = document.getElementById('statusNote').value;
+        
+        fetch('/api/update_order_status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                order_id: orderId,
+                status: newStatus,
+                note: note
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                statusModal.hide();
+                location.reload();
+            } else {
+                alert('Error updating status: ' + data.message);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

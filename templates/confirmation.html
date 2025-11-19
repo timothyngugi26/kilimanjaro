@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Order Confirmation - Food Ordering System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h3 class="mb-0">✅ Order Complete!</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <h5>Thank you for your order!</h5>
+                </div>
+
+                <h5>Order Details</h5>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item, quantity in order.items() %}
+                            <tr>
+                                <td>{{ emojis[item] }} {{ item }}</td>
+                                <td>{{ quantity }}</td>
+                                <td>${{ "%.2f"|format(menu[item] * quantity) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Delivery Information</h6>
+                        <p><strong>Option:</strong> {{ details.delivery_option.title() }}</p>
+                        {% if details.delivery_option == 'delivery' %}
+                        <p><strong>Delivery to:</strong> {{ details.location }}</p>
+                        {% else %}
+                        <p><strong>Pickup time:</strong> {{ details.pickup_time }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Timing</h6>
+                        <p><strong>Preparation time:</strong> {{ details.prep_time }} minutes</p>
+                        <p><strong>Expected ready at:</strong> {{ details.ready_time }}</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6 class="mb-2">Payment Information</h6>
+                    <p class="mb-1"><strong>Total Amount:</strong> ${{ "%.2f"|format(total) }}</p>
+                    <p class="mb-1"><strong>M-Pesa Number:</strong> {{ details.phone }}</p>
+                    <p class="mb-0 text-success"><strong>Payment Status:</strong> ✅ Processed</p>
+                </div>
+
+                <div class="d-grid gap-2 mt-4">
+                    <a href="{{ url_for('complete_order') }}" class="btn btn-primary">
+                        Place New Order
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Kitchen Analytics - Food Ordering System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>📊 Kitchen Analytics</h1>
+        <div>
+            <a href="{{ url_for('kitchen_dashboard') }}" class="btn btn-primary">Dashboard</a>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Customer View</a>
+        </div>
+    </div>
+
+    <!-- Analytics Summary -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Orders</h5>
+                    <h2 class="card-text">{{ total_orders }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Pending</h5>
+                    <h2 class="card-text">{{ pending_orders }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Preparing</h5>
+                    <h2 class="card-text">{{ preparing_orders }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Ready</h5>
+                    <h2 class="card-text">{{ ready_orders }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Today's Orders -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">Today's Summary</h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <h1 class="display-4 text-primary">{{ today_orders }}</h1>
+                        <p class="lead">Orders Today</p>
+                    </div>
+                    <div class="mt-4">
+                        <p><strong>Current Time:</strong> {{ now.strftime('%Y-%m-%d %H:%M:%S') if now else '' }}</p>
+                        <p><strong>Date Range:</strong> Today ({{ now.strftime('%Y-%m-%d') if now else '' }})</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Popular Items -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">Most Popular Items</h4>
+                </div>
+                <div class="card-body">
+                    {% if popular_items %}
+                    <div class="list-group">
+                        {% for item, count in popular_items %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="emoji">{{ emojis[item] }}</span>
+                                <strong>{{ item }}</strong>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">{{ count }} orders</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No order data available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Trends (Placeholder for future charts) -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">Order Trends</h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center py-4">
+                        <p class="text-muted">Order trends and charts will be displayed here</p>
+                        <p><small>Future features: Daily order charts, revenue analysis, peak hours</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h4 class="mb-0">Quick Actions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                        <a href="{{ url_for('kitchen_dashboard') }}" class="btn btn-primary">
+                            📋 View Active Orders
+                        </a>
+                        <button class="btn btn-outline-secondary" onclick="location.reload()">
+                            🔄 Refresh Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh analytics every 60 seconds
+    setInterval(() => {
+        location.reload();
+    }, 60000);
+});
+</script>
+{% endblock %}
