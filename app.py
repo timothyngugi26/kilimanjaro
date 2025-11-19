@@ -5,15 +5,30 @@ from flask_bcrypt import Bcrypt
 from datetime import datetime, timedelta
 import random
 import os
-
 from dotenv import load_dotenv
-load_dotenv() 
+
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'MyGodisgreat:Jesusreigns'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'postgresql://food_user:Godhasincreasedme700%@localhost/food_ordering'
+
+# SECURITY FIX: Use environment variable for secret key
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# DATABASE FIX: Proper Railway PostgreSQL configuration
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url:
+    # Fix for Railway/Heroku PostgreSQL URL format
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Fallback for local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://food_user:Godhasincreasedme700%@localhost/food_ordering'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# ✅ FIXED: Single initialization (remove duplicates)
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
@@ -149,6 +164,21 @@ def init_menu_items():
         db.session.bulk_save_objects(menu_items)
         db.session.commit()
 
+# ✅ FIXED: Add missing kitchen user function
+def create_kitchen_user():
+    if not User.query.filter_by(email='kitchen@example.com').first():
+        hashed_password = bcrypt.generate_password_hash('kitchen123').decode('utf-8')
+        kitchen_user = User(
+            email='kitchen@example.com',
+            name='Kitchen Staff',
+            phone='254700000000',
+            password_hash=hashed_password,
+            role='kitchen'
+        )
+        db.session.add(kitchen_user)
+        db.session.commit()
+        print("✅ Kitchen user created: kitchen@example.com / kitchen123")
+
 # Routes
 @app.route('/')
 def index():
@@ -166,7 +196,7 @@ def index():
     return render_template('index.html', 
                          menu_items=menu_items, 
                          cart_total=cart_total,
-                         delivery_fee=2.99)  # Optional delivery fee
+                         delivery_fee=2.99)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -234,6 +264,7 @@ def add_to_cart():
         'cart_count': sum(cart.values()),
         'message': f'Added {menu_item.name} to cart'
     })
+
 @app.route('/checkout', methods=['GET', 'POST'])
 @login_required
 def checkout():
@@ -258,7 +289,7 @@ def checkout():
             total += item_total
     
     # Add delivery fee if applicable
-    delivery_fee = 2.99  # You can make this dynamic based on delivery option
+    delivery_fee = 2.99
     
     if request.method == 'POST':
         delivery_option = request.form.get('delivery_option')
@@ -338,7 +369,6 @@ def clear_cart():
     session.pop('cart', None)
     return jsonify({'success': True})
 
-# Add this route for cart display
 @app.route('/cart')
 @login_required
 def view_cart():
@@ -487,8 +517,13 @@ def admin_dashboard():
     total_revenue = db.session.query(db.func.sum(Order.total_amount)).scalar() or 0
     return render_template('admin_dashboard.html', users_count=users_count, total_revenue=total_revenue)
 
+# ✅ FIXED: Add production configuration
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         init_menu_items()
-    app.run(debug=True)
+        create_kitchen_user()
+    
+    # Railway sets the PORT environment variable
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
