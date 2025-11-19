@@ -8,16 +8,22 @@
         <p class="text-muted">Click on items to add them to your order</p>
         
         <div class="row">
-            {% for item, price in menu.items() %}
+            {% for item in menu_items %}
             <div class="col-md-6 mb-4">
-                <div class="card menu-item" style="border-left: 4px solid {{ colors[item] }};">
+                <div class="card menu-item" style="border-left: 4px solid {{ item.color }};">
                     <div class="card-body text-center">
-                        <div class="emoji" style="font-size: 3rem;">{{ emojis[item] }}</div>
-                        <h5 class="card-title">{{ item }}</h5>
-                        <p class="card-text text-success fw-bold">${{ "%.2f"|format(price) }}</p>
-                        <button class="btn btn-primary add-to-cart" data-item="{{ item }}">
+                        <div class="emoji" style="font-size: 3rem;">{{ item.emoji }}</div>
+                        <h5 class="card-title">{{ item.name }}</h5>
+                        <p class="card-text text-success fw-bold">${{ "%.2f"|format(item.price) }}</p>
+                        {% if current_user.is_authenticated %}
+                        <button class="btn btn-primary add-to-cart" data-item-id="{{ item.id }}">
                             Add to Order
                         </button>
+                        {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
+                            Login to Order
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -25,57 +31,120 @@
         </div>
     </div>
 
-    <!-- Order Summary -->
+    <!-- Order Summary - Updated to show cart items -->
     <div class="col-md-4">
-        <div class="card">
-            <div class="card-header bg-light">
+        <div class="card sticky-top" style="top: 20px;">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Your Order</h4>
+                {% if session.cart %}
+                <span class="badge bg-primary rounded-pill" id="cart-count">
+                    {{ session.cart.values()|sum }}
+                </span>
+                {% endif %}
             </div>
             <div class="card-body">
+                {% if current_user.is_authenticated %}
                 <div id="order-items">
-                    {% if order %}
-                        {% for item, quantity in order.items() %}
-                        <div class="order-item mb-2 p-2 border rounded">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span class="emoji">{{ emojis[item] }}</span>
-                                    <strong>{{ item }}</strong>
-                                    <br>
-                                    <small>Quantity: {{ quantity }}</small>
-                                    <br>
-                                    <small class="text-success">${{ "%.2f"|format(menu[item] * quantity) }}</small>
+                    {% if session.cart %}
+                        {% set cart_items = [] %}
+                        {% set total = 0 %}
+                        {% for item_id, quantity in session.cart.items() %}
+                            {% set menu_item = menu_items|selectattr("id", "equalto", item_id|int)|first %}
+                            {% if menu_item %}
+                                {% set item_total = menu_item.price * quantity %}
+                                {% set _ = cart_items.append({
+                                    'item': menu_item,
+                                    'quantity': quantity,
+                                    'item_total': item_total
+                                }) %}
+                                {% set total = total + item_total %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% for cart_item in cart_items %}
+                        <div class="order-item mb-3 p-3 border rounded" id="cart-item-{{ cart_item.item.id }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="emoji me-2">{{ cart_item.item.emoji }}</span>
+                                        <strong>{{ cart_item.item.name }}</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="quantity-controls">
+                                            <button class="btn btn-sm btn-outline-secondary decrease-quantity" 
+                                                    data-item-id="{{ cart_item.item.id }}">
+                                                -
+                                            </button>
+                                            <span class="mx-2 fw-bold">{{ cart_item.quantity }}</span>
+                                            <button class="btn btn-sm btn-outline-secondary increase-quantity" 
+                                                    data-item-id="{{ cart_item.item.id }}">
+                                                +
+                                            </button>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="text-success fw-bold">${{ "%.2f"|format(cart_item.item_total) }}</div>
+                                            <small class="text-muted">${{ "%.2f"|format(cart_item.item.price) }} each</small>
+                                        </div>
+                                    </div>
                                 </div>
-                                <button class="btn btn-sm btn-outline-danger remove-item" data-item="{{ item }}">
+                                <button class="btn btn-sm btn-outline-danger ms-2 remove-item" 
+                                        data-item-id="{{ cart_item.item.id }}" title="Remove item">
                                     ×
                                 </button>
                             </div>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <p class="text-muted">Your order is empty.</p>
-                        <p class="text-muted">Click on items to add them to your order.</p>
+                        <div class="text-center py-4">
+                            <div class="emoji" style="font-size: 2rem;">🛒</div>
+                            <p class="text-muted mt-2">Your cart is empty</p>
+                            <p class="text-muted small">Add items from the menu to see them here</p>
+                        </div>
                     {% endif %}
                 </div>
                 
+                {% if session.cart %}
                 <div class="mt-3 pt-3 border-top">
-                    <h5 class="d-flex justify-content-between">
-                        <span>Total:</span>
-                        <span class="text-success">${{ "%.2f"|format(total) }}</span>
-                    </h5>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Subtotal:</span>
+                        <span class="fw-bold">${{ "%.2f"|format(total) }}</span>
+                    </div>
+                    {% if delivery_fee %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Delivery Fee:</span>
+                        <span class="fw-bold">${{ "%.2f"|format(delivery_fee) }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span><strong>Total:</strong></span>
+                        <span class="text-success fw-bold fs-5">${{ "%.2f"|format(total + (delivery_fee or 0)) }}</span>
+                    </div>
                 </div>
 
                 <div class="mt-3 d-grid gap-2">
-                    {% if order %}
                     <a href="{{ url_for('checkout') }}" class="btn btn-success btn-lg">
-                        Checkout
+                        🛍️ Proceed to Checkout
                     </a>
-                    <a href="{{ url_for('clear_cart') }}" class="btn btn-outline-danger">
-                        Clear Order
-                    </a>
-                    {% else %}
-                    <button class="btn btn-secondary btn-lg" disabled>Checkout</button>
-                    {% endif %}
+                    <button class="btn btn-outline-danger" onclick="clearCart()">
+                        🗑️ Clear Cart
+                    </button>
                 </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted">Please add items to your cart</p>
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="text-center py-4">
+                    <div class="emoji" style="font-size: 2rem;">🔐</div>
+                    <p class="text-muted mt-2">Please login to start ordering</p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('login') }}" class="btn btn-primary">Login</a>
+                        <a href="{{ url_for('register') }}" class="btn btn-outline-primary">Register</a>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -91,4 +160,191 @@
         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const feedbackToast = new bootstrap.Toast(document.getElementById('feedbackToast'));
+    
+    // Add to cart functionality
+    const addToCartButtons = document.querySelectorAll('.add-to-cart');
+    addToCartButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            addToCart(itemId, 1);
+        });
+    });
+    
+    // Increase quantity
+    const increaseButtons = document.querySelectorAll('.increase-quantity');
+    increaseButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            addToCart(itemId, 1);
+        });
+    });
+    
+    // Decrease quantity
+    const decreaseButtons = document.querySelectorAll('.decrease-quantity');
+    decreaseButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            updateCartQuantity(itemId, -1);
+        });
+    });
+    
+    // Remove item
+    const removeButtons = document.querySelectorAll('.remove-item');
+    removeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const itemId = this.dataset.itemId;
+            removeFromCart(itemId);
+        });
+    });
+});
+
+function addToCart(itemId, quantity = 1) {
+    fetch('/add_to_cart', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ item_id: itemId, quantity: quantity })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showFeedback('✓ Added to cart!');
+            setTimeout(() => {
+                location.reload();
+            }, 800);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showFeedback('❌ Error adding item', 'danger');
+    });
+}
+
+function updateCartQuantity(itemId, change) {
+    fetch('/update_cart_quantity', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ item_id: itemId, change: change })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.removed) {
+                showFeedback('Item removed from cart');
+            } else {
+                showFeedback('Cart updated');
+            }
+            setTimeout(() => {
+                location.reload();
+            }, 800);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showFeedback('❌ Error updating cart', 'danger');
+    });
+}
+
+function removeFromCart(itemId) {
+    if (confirm('Remove this item from cart?')) {
+        fetch('/remove_from_cart', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ item_id: itemId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showFeedback('Item removed from cart');
+                setTimeout(() => {
+                    location.reload();
+                }, 800);
+            }
+        });
+    }
+}
+
+function clearCart() {
+    if (confirm('Are you sure you want to clear your entire cart?')) {
+        fetch('/clear_cart', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showFeedback('Cart cleared');
+                setTimeout(() => {
+                    location.reload();
+                }, 800);
+            }
+        });
+    }
+}
+
+function showFeedback(message, type = 'success') {
+    const toast = document.getElementById('feedbackToast');
+    const toastMessage = document.getElementById('toastMessage');
+    
+    // Update toast style based on type
+    if (type === 'danger') {
+        toast.classList.remove('bg-success');
+        toast.classList.add('bg-danger');
+    } else {
+        toast.classList.remove('bg-danger');
+        toast.classList.add('bg-success');
+    }
+    
+    toastMessage.textContent = message;
+    bootstrap.Toast.getOrCreateInstance(toast).show();
+}
+</script>
+
+<style>
+.menu-item {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.menu-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.order-item {
+    transition: all 0.2s ease;
+}
+
+.order-item:hover {
+    background-color: #f8f9fa;
+}
+
+.quantity-controls .btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sticky-top {
+    position: sticky;
+    z-index: 100;
+}
+
+.emoji {
+    font-size: 1.5rem;
+}
+</style>
 {% endblock %}

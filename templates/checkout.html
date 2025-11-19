@@ -4,111 +4,222 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <div class="card">
             <div class="card-header bg-primary text-white">
                 <h3 class="mb-0">Checkout</h3>
             </div>
             <div class="card-body">
                 <!-- Order Summary -->
-                <h5>Order Summary</h5>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Quantity</th>
-                                <th>Price</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item, quantity in order.items() %}
-                            <tr>
-                                <td>{{ emojis[item] }} {{ item }}</td>
-                                <td>{{ quantity }}</td>
-                                <td>${{ "%.2f"|format(menu[item]) }}</td>
-                                <td>${{ "%.2f"|format(menu[item] * quantity) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                        <tfoot>
-                            <tr class="table-success">
-                                <td colspan="3" class="text-end"><strong>Total:</strong></td>
-                                <td><strong>${{ "%.2f"|format(total) }}</strong></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                <div class="row">
+                    <div class="col-md-8">
+                        <h5>Order Summary</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Quantity</th>
+                                        <th>Price</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cart_item in cart_items %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <span class="emoji me-2">{{ cart_item.item.emoji }}</span>
+                                                {{ cart_item.item.name }}
+                                            </div>
+                                        </td>
+                                        <td>{{ cart_item.quantity }}</td>
+                                        <td>${{ "%.2f"|format(cart_item.item.price) }}</td>
+                                        <td>${{ "%.2f"|format(cart_item.item_total) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                        <td><strong>${{ "%.2f"|format(total) }}</strong></td>
+                                    </tr>
+                                    <tr class="table-success">
+                                        <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                        <td><strong>${{ "%.2f"|format(total + delivery_fee) }}</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <hr>
+
+                        <!-- Checkout Form -->
+                        <form method="POST" action="{{ url_for('checkout') }}">
+                            <div class="mb-4">
+                                <h5>Customer Information</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="name" class="form-label">Full Name</label>
+                                            <input type="text" class="form-control" id="name" name="name" 
+                                                   value="{{ current_user.name }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="phone" class="form-label">Phone Number</label>
+                                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                                   value="{{ current_user.phone }}" placeholder="2547XXXXXXXX" required>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h5>Delivery Option</h5>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="delivery_option" 
+                                           id="delivery" value="delivery" checked>
+                                    <label class="form-check-label" for="delivery">
+                                        🚚 Home Delivery (+${{ "%.2f"|format(delivery_fee) }})
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="delivery_option" 
+                                           id="pickup" value="pickup">
+                                    <label class="form-check-label" for="pickup">
+                                        🏪 Pickup In-Store (No delivery fee)
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Delivery Location -->
+                            <div class="mb-3" id="deliveryLocation">
+                                <label for="delivery_address" class="form-label">Delivery Address</label>
+                                <textarea class="form-control" id="delivery_address" name="delivery_address" 
+                                          rows="3" placeholder="Enter your complete delivery address"></textarea>
+                            </div>
+
+                            <!-- Pickup Time -->
+                            <div class="mb-3" id="pickupTime" style="display: none;">
+                                <label for="pickup_time" class="form-label">Preferred Pickup Time</label>
+                                <input type="time" class="form-control" id="pickup_time" name="pickup_time">
+                            </div>
+
+                            <!-- Special Instructions -->
+                            <div class="mb-4">
+                                <label for="special_instructions" class="form-label">Special Instructions (Optional)</label>
+                                <textarea class="form-control" id="special_instructions" name="special_instructions" 
+                                          rows="3" placeholder="Any special requests or instructions..."></textarea>
+                            </div>
+
+                            <!-- Payment -->
+                            <div class="mb-4">
+                                <h5>Payment Method</h5>
+                                <div class="alert alert-info">
+                                    <strong>M-Pesa Payment</strong><br>
+                                    You will receive an M-Pesa prompt on your phone after placing the order.
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    Place Order & Pay
+                                </button>
+                                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                                    Back to Menu
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Order Summary Sidebar -->
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Order Total</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Subtotal:</span>
+                                    <span>${{ "%.2f"|format(total) }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Delivery Fee:</span>
+                                    <span id="fee-display">${{ "%.2f"|format(delivery_fee) }}</span>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <strong>Total:</strong>
+                                    <strong id="total-display">${{ "%.2f"|format(total + delivery_fee) }}</strong>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <h6>Items in Order:</h6>
+                                    {% for cart_item in cart_items %}
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <small>{{ cart_item.item.emoji }} {{ cart_item.item.name }} x{{ cart_item.quantity }}</small>
+                                        <small>${{ "%.2f"|format(cart_item.item_total) }}</small>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
-                <hr>
-
-                <!-- Checkout Form -->
-                <form method="POST" action="{{ url_for('process_checkout') }}">
-                    <!-- Customer Information -->
-                    <div class="mb-4">
-                        <h5>Customer Information</h5>
-                        <!-- Add this to checkout.html form -->
-                        <div class="mb-3">
-                            <label for="customer_name" class="form-label">Your Name</label>
-                            <input type="text" class="form-control" id="customer_name" name="customer_name" 
-                                   placeholder="Enter your name" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <h5>Delivery Option</h5>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="delivery_option" 
-                                   id="delivery" value="delivery" checked>
-                            <label class="form-check-label" for="delivery">
-                                🚚 Home Delivery
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="delivery_option" 
-                                   id="pickup" value="pickup">
-                            <label class="form-check-label" for="pickup">
-                                🏪 Pickup In-Store
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Delivery Location -->
-                    <div class="mb-3" id="deliveryLocation">
-                        <label for="location" class="form-label">Delivery Address</label>
-                        <input type="text" class="form-control" id="location" name="location" 
-                               placeholder="Enter your delivery address">
-                    </div>
-
-                    <!-- Pickup Time -->
-                    <div class="mb-3" id="pickupTime" style="display: none;">
-                        <label for="pickup_time" class="form-label">Pickup Time</label>
-                        <input type="time" class="form-control" id="pickup_time" name="pickup_time">
-                    </div>
-
-                    <!-- Payment -->
-                    <div class="mb-4">
-                        <h5>Payment</h5>
-                        <div class="mb-3">
-                            <label for="phone" class="form-label">M-Pesa Phone Number</label>
-                            <input type="tel" class="form-control" id="phone" name="phone" 
-                                   placeholder="2547XXXXXXXX" pattern="254[0-9]{9}" required>
-                            <div class="form-text">Enter your M-Pesa number in format 2547XXXXXXXX</div>
-                        </div>
-                    </div>
-
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-success btn-lg">
-                            Complete Order
-                        </button>
-                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
-                            Back to Menu
-                        </a>
-                    </div>
-                </form>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deliveryRadio = document.getElementById('delivery');
+    const pickupRadio = document.getElementById('pickup');
+    const deliveryLocation = document.getElementById('deliveryLocation');
+    const pickupTime = document.getElementById('pickupTime');
+    const feeDisplay = document.getElementById('fee-display');
+    const totalDisplay = document.getElementById('total-display');
+    
+    const deliveryFee = {{ delivery_fee }};
+    const subtotal = {{ total }};
+    
+    function updateTotals(includeDelivery) {
+        const fee = includeDelivery ? deliveryFee : 0;
+        const total = subtotal + fee;
+        
+        feeDisplay.textContent = '$' + fee.toFixed(2);
+        totalDisplay.textContent = '$' + total.toFixed(2);
+    }
+    
+    function toggleDeliveryOptions() {
+        if (deliveryRadio.checked) {
+            deliveryLocation.style.display = 'block';
+            pickupTime.style.display = 'none';
+            updateTotals(true);
+        } else {
+            deliveryLocation.style.display = 'none';
+            pickupTime.style.display = 'block';
+            updateTotals(false);
+        }
+    }
+    
+    deliveryRadio.addEventListener('change', toggleDeliveryOptions);
+    pickupRadio.addEventListener('change', toggleDeliveryOptions);
+    
+    // Set default pickup time to current time + 1 hour
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    const pickupTimeInput = document.getElementById('pickup_time');
+    if (pickupTimeInput) {
+        pickupTimeInput.value = now.toTimeString().slice(0, 5);
+    }
+    
+    // Initialize
+    toggleDeliveryOptions();
+});
+</script>
 {% endblock %}
