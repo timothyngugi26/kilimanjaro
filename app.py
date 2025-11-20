@@ -13,18 +13,29 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configuration
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
+
+app = Flask(__name__)
+
+# Configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'MyGodisgreat:Jesusreigns')
+
+# Database configuration
 database_url = os.environ.get('DATABASE_URL')
 if database_url:
+    # Fix common PostgreSQL URL issue (Heroku etc.)
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
+    # Fallback to local development database
     app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://food_user:Godhasincreasedme700%@localhost/food_ordering'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 # Initialize extensions
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
