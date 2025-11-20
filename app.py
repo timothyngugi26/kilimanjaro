@@ -227,6 +227,81 @@ def update_sales_and_inventory(order):
                     db.session.add(stock_history)
     db.session.commit()
 
+# ... your database models code ...
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# ==================== FIX: DATABASE INITIALIZATION ====================
+
+def initialize_database():
+    """Initialize database tables and data"""
+    with app.app_context():
+        try:
+            print("🚀 Starting database initialization...")
+            
+            # Create all tables
+            db.create_all()
+            print("✅ Database tables created")
+            
+            # Initialize data only if tables are empty
+            if MenuItem.query.count() == 0:
+                print("📝 Initializing menu items...")
+                init_menu_items()
+            
+            if Ingredient.query.count() == 0:
+                print("🥬 Initializing ingredients...")
+                init_ingredients()
+            
+            if IngredientUsage.query.count() == 0:
+                print("🔗 Initializing ingredient usage...")
+                init_ingredient_usage()
+            
+            if not User.query.filter_by(email='kitchen@example.com').first():
+                print("👨‍🍳 Creating kitchen user...")
+                create_kitchen_user()
+            
+            if not User.query.filter_by(email='admin@example.com').first():
+                print("👨‍💼 Creating admin user...")
+                create_admin_user()
+                
+            print("🎉 Database initialization completed!")
+            
+        except Exception as e:
+            print(f"❌ Database error: {str(e)}")
+            import traceback
+            print(f"🔍 Full traceback: {traceback.format_exc()}")
+
+# Initialize database immediately
+print("🔄 Starting database setup...")
+initialize_database()
+print("✅ Database setup complete")
+
+# ==================== ROUTES ====================
+@app.route('/init')
+def init_route():
+    """Manual initialization route"""
+    try:
+        initialize_database()
+        return """
+        <h1>Database Initialized!</h1>
+        <p>Tables created and data populated.</p>
+        <p><a href="/">Go to homepage</a></p>
+        """
+    except Exception as e:
+        return f"<h1>Initialization Failed</h1><pre>{str(e)}</pre>"
+
+@app.route('/health')
+def health():
+    """Health check route"""
+    try:
+        # Test database connection
+        db.engine.connect()
+        menu_count = MenuItem.query.count()
+        return f"✅ App is healthy! Database connected. Menu items: {menu_count}"
+    except Exception as e:
+        return f"❌ Health check failed: {str(e)}"
 # ==================== ROUTES ====================
 
 @app.route('/')
@@ -577,12 +652,8 @@ def ingredient_usage(menu_item_id):
                          total_cost=total_cost)
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        init_menu_items()
-        init_ingredients()
-        init_ingredient_usage()
-        create_kitchen_user()
-        create_admin_user()
+    # Database is already initialized above
     port = int(os.environ.get('PORT', 5000))
+    print(f"🚀 Starting Flask app on port {port}...")
     app.run(host='0.0.0.0', port=port, debug=False)
+
