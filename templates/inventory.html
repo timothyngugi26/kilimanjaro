@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory Management - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-boxes me-2"></i>Inventory Management</h1>
+        <div>
+            <a href="{{ url_for('return_on_plate') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-chart-line me-2"></i>ROI Analysis
+            </a>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Low Stock Alert -->
+    {% if low_stock %}
+    <div class="alert alert-warning">
+        <h5><i class="fas fa-exclamation-triangle me-2"></i>Low Stock Alert</h5>
+        <p>The following ingredients are running low:</p>
+        <ul class="mb-0">
+            {% for ingredient in low_stock %}
+            <li><strong>{{ ingredient.name }}</strong> - {{ ingredient.current_stock }} {{ ingredient.unit }} remaining</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Inventory Table -->
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Ingredient Inventory</h4>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStockModal">
+                <i class="fas fa-plus me-2"></i>Add Stock
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Ingredient</th>
+                            <th>Current Stock</th>
+                            <th>Unit</th>
+                            <th>Cost/Unit</th>
+                            <th>Reorder Level</th>
+                            <th>Status</th>
+                            <th>Total Value</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ingredient in ingredients %}
+                        <tr>
+                            <td><strong>{{ ingredient.name }}</strong></td>
+                            <td>{{ "%.2f"|format(ingredient.current_stock) }}</td>
+                            <td>{{ ingredient.unit }}</td>
+                            <td>${{ "%.2f"|format(ingredient.cost_per_unit) }}</td>
+                            <td>{{ "%.2f"|format(ingredient.reorder_level) }}</td>
+                            <td>
+                                {% if ingredient.current_stock <= ingredient.reorder_level %}
+                                <span class="badge bg-danger">Low Stock</span>
+                                {% elif ingredient.current_stock <= ingredient.reorder_level * 2 %}
+                                <span class="badge bg-warning">Medium Stock</span>
+                                {% else %}
+                                <span class="badge bg-success">Good Stock</span>
+                                {% endif %}
+                            </td>
+                            <td>${{ "%.2f"|format(ingredient.current_stock * ingredient.cost_per_unit) }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary update-stock-btn" 
+                                        data-ingredient-id="{{ ingredient.id }}"
+                                        data-ingredient-name="{{ ingredient.name }}">
+                                    <i class="fas fa-edit"></i> Update
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Inventory Value -->
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Inventory Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <h3>${{ "%.2f"|format(ingredients|sum(attribute='current_stock') * ingredients|sum(attribute='cost_per_unit') / ingredients|length if ingredients else 0) }}</h3>
+                    <p class="text-muted">Total Inventory Value</p>
+                </div>
+                <div class="col-md-4">
+                    <h3>{{ ingredients|length }}</h3>
+                    <p class="text-muted">Total Ingredients</p>
+                </div>
+                <div class="col-md-4">
+                    <h3 class="{% if low_stock %}text-warning{% else %}text-success{% endif %}">
+                        {{ low_stock|length }}
+                    </h3>
+                    <p class="text-muted">Low Stock Items</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Stock Modal -->
+<div class="modal fade" id="addStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stockForm">
+                    <div class="mb-3">
+                        <label for="ingredientSelect" class="form-label">Select Ingredient</label>
+                        <select class="form-select" id="ingredientSelect" required>
+                            <option value="">Choose ingredient...</option>
+                            {% for ingredient in ingredients %}
+                            <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Quantity</label>
+                        <input type="number" step="0.01" class="form-control" id="quantity" required>
+                        <div class="form-text">Use positive numbers to add stock, negative to remove</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="note" class="form-label">Note (Optional)</label>
+                        <textarea class="form-control" id="note" rows="2" placeholder="Reason for stock update..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveStockBtn">Update Stock</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update stock buttons
+    const updateButtons = document.querySelectorAll('.update-stock-btn');
+    const ingredientSelect = document.getElementById('ingredientSelect');
+    const stockForm = document.getElementById('stockForm');
+    const saveStockBtn = document.getElementById('saveStockBtn');
+    
+    updateButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const ingredientId = this.dataset.ingredientId;
+            const ingredientName = this.dataset.ingredientName;
+            
+            // Set the selected ingredient
+            ingredientSelect.value = ingredientId;
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('addStockModal'));
+            modal.show();
+        });
+    });
+    
+    // Save stock update
+    saveStockBtn.addEventListener('click', function() {
+        const ingredientId = ingredientSelect.value;
+        const quantity = parseFloat(document.getElementById('quantity').value);
+        const note = document.getElementById('note').value;
+        
+        if (!ingredientId || isNaN(quantity)) {
+            alert('Please fill all required fields');
+            return;
+        }
+        
+        fetch('/admin/update-stock', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ingredient_id: ingredientId,
+                quantity: quantity,
+                note: note
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating stock');
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Ingredient Usage - {{ menu_item.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>
+            <span class="emoji me-2">{{ menu_item.emoji }}</span>
+            {{ menu_item.name }} - Ingredient Cost Breakdown
+        </h1>
+        <div>
+            <a href="{{ url_for('return_on_plate') }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to ROI Analysis
+            </a>
+        </div>
+    </div>
+
+    <!-- Cost Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Selling Price</h5>
+                    <h2 class="card-text">${{ "%.2f"|format(menu_item.price) }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Cost per Plate</h5>
+                    <h2 class="card-text">${{ "%.2f"|format(total_cost) }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Profit per Plate</h5>
+                    <h2 class="card-text">${{ "%.2f"|format(menu_item.price - total_cost) }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ingredient Breakdown -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Ingredient Cost Breakdown</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Ingredient</th>
+                            <th>Quantity Used</th>
+                            <th>Unit</th>
+                            <th>Cost per Unit</th>
+                            <th>Cost per Plate</th>
+                            <th>Percentage of Total Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in usage_data %}
+                        <tr>
+                            <td><strong>{{ data.ingredient.name }}</strong></td>
+                            <td>{{ "%.3f"|format(data.quantity_used) }}</td>
+                            <td>{{ data.ingredient.unit }}</td>
+                            <td>${{ "%.2f"|format(data.ingredient.cost_per_unit) }}</td>
+                            <td>${{ "%.3f"|format(data.cost_for_plate) }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: {{ (data.cost_for_plate/total_cost*100)|round(1) }}%;">
+                                        {{ "%.1f"|format(data.cost_for_plate/total_cost*100) }}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-success">
+                        <tr>
+                            <td colspan="4" class="text-end"><strong>Total Cost per Plate:</strong></td>
+                            <td><strong>${{ "%.2f"|format(total_cost) }}</strong></td>
+                            <td><strong>100%</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profitability Analysis -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Profitability Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Profit Margin:</strong>
+                        <span class="float-end {% if ((menu_item.price - total_cost)/menu_item.price*100) > 30 %}text-success{% else %}text-warning{% endif %}">
+                            {{ "%.1f"|format((menu_item.price - total_cost)/menu_item.price*100) }}%
+                        </span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Return on Investment:</strong>
+                        <span class="float-end {% if ((menu_item.price - total_cost)/total_cost*100) > 100 %}text-success{% else %}text-primary{% endif %}">
+                            {{ "%.1f"|format((menu_item.price - total_cost)/total_cost*100) }}%
+                        </span>
+                    </div>
+                    <div>
+                        <strong>Break-even Point:</strong>
+                        <span class="float-end">{{ (total_cost/menu_item.price)|round(2) }} plates</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">Sales Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Total Sold:</strong>
+                        <span class="float-end">{{ menu_item.total_sold }} plates</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Total Revenue:</strong>
+                        <span class="float-end">${{ "%.2f"|format(menu_item.total_revenue) }}</span>
+                    </div>
+                    <div>
+                        <strong>Total Profit:</strong>
+                        <span class="float-end text-success">${{ "%.2f"|format((menu_item.price - total_cost) * menu_item.total_sold) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
