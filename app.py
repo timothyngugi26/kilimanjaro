@@ -531,8 +531,73 @@ def kitchen_dashboard():
     if current_user.role not in ['kitchen', 'admin']:
         flash('Access denied', 'danger')
         return redirect(url_for('index'))
-    orders = Order.query.filter(Order.status.in_(['pending', 'confirmed', 'preparing'])).order_by(Order.order_time.desc()).all()
-    return render_template('kitchen.html', orders=orders)
+    
+    # Get active orders
+    orders = Order.query.filter(Order.status.in_(['pending', 'confirmed', 'preparing', 'ready'])).order_by(Order.order_time.desc()).all()
+    
+    # Format orders for template
+    active_orders = {}
+    for order in orders:
+        # Get items for this order
+        items = {}
+        for order_item in order.order_items:
+            items[order_item.menu_item_name] = order_item.quantity
+        
+        active_orders[order.id] = {
+            'id': order.id,
+            'order_number': order.order_number,
+            'customer_name': order.customer.name if order.customer else 'Unknown',
+            'phone': order.customer.phone if order.customer else 'N/A',
+            'order_time': order.order_time.strftime('%H:%M'),
+            'status': order.status,
+            'total': order.total_amount,
+            'items': items,
+            'delivery_option': order.delivery_option,
+            'delivery_address': order.delivery_address,
+            'special_instructions': order.special_instructions
+        }
+    
+    # Get completed orders for today
+    today = datetime.now().date()
+    completed_orders = Order.query.filter(
+        db.func.date(Order.order_time) == today,
+        Order.status == 'completed'
+    ).all()
+    
+    # Status mapping
+    statuses = {
+        'pending': 'Pending',
+        'confirmed': 'Confirmed', 
+        'preparing': 'Preparing',
+        'ready': 'Ready',
+        'completed': 'Completed'
+    }
+    
+    # Emoji mapping
+    emojis = {
+        'Burger': '🍔',
+        'Pizza': '🍕',
+        'Pasta': '🍝',
+        'Salad': '🥗',
+        'Soda': '🥤',
+        'Fries': '🍟',
+        'Ice Cream': '🍦',
+        'Tea': '🍵'
+    }
+    
+    return render_template('kitchen.html', 
+                         active_orders=active_orders,
+                         completed_orders=completed_orders,
+                         statuses=statuses,
+                         emojis=emojis)
+
+#@app.route('/kitchen')
+##def kitchen_dashboard():
+  #  if current_user.role not in ['kitchen', 'admin']:
+   #     flash('Access denied', 'danger')
+    #    return redirect(url_for('index'))
+    #orders = Order.query.filter(Order.status.in_(['pending', 'confirmed', 'preparing'])).order_by(Order.order_time.desc()).all()
+    #return render_template('kitchen.html', orders=orders)
 
 @app.route('/kitchen/order/<int:order_id>')
 @login_required
