@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import random
 import os
 from dotenv import load_dotenv
-from sqlalchemy import func
+from sqlalchemy import functions
 
 load_dotenv()
 
@@ -302,6 +302,25 @@ def health():
         return f"✅ App is healthy! Database connected. Menu items: {menu_count}"
     except Exception as e:
         return f"❌ Health check failed: {str(e)}"
+
+@app.route('/debug-tables')
+def debug_tables():
+    try:
+        from sqlalchemy import text
+        result = db.session.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'"))
+        tables = [row[0] for row in result]
+        print("=== DATABASE TABLES ===")
+        for table in tables:
+            print(f"  - {table}")
+        print("=======================")
+        return {
+            'success': True, 
+            'tables': tables,
+            'message': 'Check Render logs for table list'
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
 # ==================== ROUTES ====================
 
 @app.route('/')
