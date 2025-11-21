@@ -676,6 +676,68 @@ def ingredient_usage(menu_item_id):
                          usage_data=usage_data,
                          total_cost=total_cost)
 
+# ==================== DEBUG ROUTES ====================
+
+@app.route('/debug-database')
+def debug_database():
+    """Check database connection and tables"""
+    try:
+        # Test database connection
+        db.session.execute(text('SELECT 1'))
+        
+        # Get database info
+        db_url = app.config['SQLALCHEMY_DATABASE_URI']
+        using_local = 'localhost' in db_url
+        
+        # Check tables
+        result = db.session.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'"))
+        tables = [row[0] for row in result]
+        
+        return {
+            'status': 'connected',
+            'using_local_fallback': using_local,
+            'tables_count': len(tables),
+            'tables': tables,
+            'database_url_preview': db_url[:50] + '...' if db_url else 'not set'
+        }
+    except Exception as e:
+        return {'status': 'error', 'error': str(e)}
+
+@app.route('/debug-templates')
+def debug_templates():
+    """Check if templates exist"""
+    import os
+    templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
+    
+    if not os.path.exists(templates_dir):
+        return {'templates_exist': False, 'error': 'Templates directory not found'}
+    
+    template_files = os.listdir(templates_dir)
+    required_templates = ['index.html', 'return_on_plate.html', 'inventory.html']
+    missing_templates = [t for t in required_templates if t not in template_files]
+    
+    return {
+        'templates_exist': True,
+        'template_files': template_files,
+        'missing_templates': missing_templates,
+        'templates_dir': templates_dir
+    }
+
+@app.route('/test-route')
+def test_route():
+    """Simple test route without templates"""
+    return jsonify({'message': 'App is working!', 'status': 'success'})
+
+@app.route('/test-template')
+def test_template():
+    """Test if basic template rendering works"""
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        return f"Template error: {str(e)}"
+
+# ==================== END DEBUG ROUTES ====================
+
 if __name__ == '__main__':
     # Database is already initialized above
     port = int(os.environ.get('PORT', 5000))
