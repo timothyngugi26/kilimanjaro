@@ -7,6 +7,9 @@ import random
 import os
 from dotenv import load_dotenv
 from sqlalchemy import functions
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
+from sqlalchemy import text
 
 load_dotenv()
 
@@ -277,6 +280,20 @@ def initialize_database():
 print("🔄 Starting database setup...")
 initialize_database()
 print("✅ Database setup complete")
+
+
+# Add after db initialization
+admin = Admin(app, name='Food Admin', template_mode='bootstrap3')
+
+# Simple table viewer without auto-discovery first
+@app.route('/admin/tables')
+def show_tables():
+    try:
+        result = db.session.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'"))
+        tables = [row[0] for row in result]
+        return {'tables': tables}
+    except Exception as e:
+        return {'error': str(e)}
 
 # ==================== ROUTES ====================
 @app.route('/init')
