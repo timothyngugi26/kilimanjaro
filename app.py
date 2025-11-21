@@ -640,13 +640,28 @@ def kitchen_analytics():
         OrderItem.menu_item_name,
         func.sum(OrderItem.quantity).label('total_quantity')
     ).group_by(OrderItem.menu_item_name).order_by(func.sum(OrderItem.quantity).desc()).limit(5).all()
+    
+    # Add emojis mapping
+    emojis = {
+        'Burger': '🍔',
+        'Pizza': '🍕',
+        'Pasta': '🍝',
+        'Salad': '🥗',
+        'Soda': '🥤',
+        'Fries': '🍟',
+        'Ice Cream': '🍦',
+        'Tea': '🍵'
+    }
+    
     return render_template('kitchen_analytics.html',
                          total_orders=total_orders,
                          pending_orders=pending_orders,
                          preparing_orders=preparing_orders,
                          ready_orders=ready_orders,
                          today_orders=today_orders,
-                         popular_items=popular_items)
+                         popular_items=popular_items,
+                         emojis=emojis)
+
 @app.route('/admin')
 @login_required
 def admin_dashboard():
