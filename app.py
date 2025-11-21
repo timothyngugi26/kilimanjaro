@@ -281,6 +281,7 @@ print("🔄 Starting database setup...")
 initialize_database()
 print("✅ Database setup complete")
 
+admin = Admin(app, name='Food Admin', url='/flask-admin')
 
 # Simple table viewer without auto-discovery first
 @app.route('/admin/tables')
