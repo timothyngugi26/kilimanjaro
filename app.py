@@ -282,9 +282,6 @@ initialize_database()
 print("✅ Database setup complete")
 
 
-# Add after db initialization
-admin = Admin(app, name='Food Admin', template_mode='bootstrap3')
-
 # Simple table viewer without auto-discovery first
 @app.route('/admin/tables')
 def show_tables():
