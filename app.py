@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import random
 import os
 from dotenv import load_dotenv
-from sqlalchemy import functions
+from sqlalchemy import func
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from sqlalchemy import text
