@@ -30,8 +30,10 @@
                             <a class="nav-link" href="{{ url_for('inventory_management') }}">
                                 <i class="fas fa-boxes me-1"></i>Inventory
                             </a>
-                            <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
-                                <i class="fas fa-tachometer-alt me-1"></i>Admin
+                            <!-- a class="nav-link" href="{{ url_for('admin_dashboard') }}" 
+                                <i class="fas fa-tachometer-alt me-1"></i>Admin -->
+                            <a class="nav-link" href="/database-admin">
+                            <i class="fas fa-tachometer-alt me-1"></i>Database Admin</a>
                             </a>
                         {% endif %}
                         

@@ -583,6 +583,14 @@ def kitchen_analytics():
                          ready_orders=ready_orders,
                          today_orders=today_orders,
                          popular_items=popular_items)
+@app.route('/admin')
+@login_required
+def admin_dashboard():
+    if current_user.role != 'admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('index'))
+    # Redirect to ROI analytics or show simple admin menu
+    return redirect(url_for('return_on_plate'))
 
 @app.route('/admin/return-on-plate')
 @login_required
