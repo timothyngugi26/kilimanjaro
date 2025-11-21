@@ -80,7 +80,7 @@
                                     
                                     <h6>Items:</h6>
                                     <ul class="list-unstyled">
-                                        {% for item, quantity in order.items.items() %}
+                                        {% for item, quantity in order.order_items.items() %}
                                         <li>{{ emojis[item] }} {{ item }} x {{ quantity }}</li>
                                         {% endfor %}
                                     </ul>

@@ -538,10 +538,10 @@ def kitchen_dashboard():
     # Format orders for template
     active_orders = {}
     for order in orders:
-        # Get items for this order
-        items = {}
+        # Get items for this order - CHANGE 'items' TO 'order_items'
+        order_items = {}
         for order_item in order.order_items:
-            items[order_item.menu_item_name] = order_item.quantity
+            order_items[order_item.menu_item_name] = order_item.quantity
         
         active_orders[order.id] = {
             'id': order.id,
@@ -551,7 +551,7 @@ def kitchen_dashboard():
             'order_time': order.order_time.strftime('%H:%M'),
             'status': order.status,
             'total': order.total_amount,
-            'items': items,
+            'order_items': order_items,  # CHANGED FROM 'items' TO 'order_items'
             'delivery_option': order.delivery_option,
             'delivery_address': order.delivery_address,
             'special_instructions': order.special_instructions
@@ -590,7 +590,6 @@ def kitchen_dashboard():
                          completed_orders=completed_orders,
                          statuses=statuses,
                          emojis=emojis)
-
 #@app.route('/kitchen')
 ##def kitchen_dashboard():
   #  if current_user.role not in ['kitchen', 'admin']:
