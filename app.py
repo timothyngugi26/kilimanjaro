@@ -584,16 +584,6 @@ def kitchen_analytics():
                          today_orders=today_orders,
                          popular_items=popular_items)
 
-@app.route('/admin')
-@login_required
-def admin_dashboard():
-    if current_user.role != 'admin':
-        flash('Access denied', 'danger')
-        return redirect(url_for('index'))
-    users_count = User.query.count()
-    total_revenue = db.session.query(db.func.sum(Order.total_amount)).scalar() or 0
-    return render_template('admin_dashboard.html', users_count=users_count, total_revenue=total_revenue)
-
 @app.route('/admin/return-on-plate')
 @login_required
 def return_on_plate():
