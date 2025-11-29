@@ -5,6 +5,7 @@ from flask_bcrypt import Bcrypt
 from datetime import datetime, timedelta
 import random
 import os
+import json
 from dotenv import load_dotenv
 from sqlalchemy import func
 from flask_admin import Admin
@@ -129,11 +130,150 @@ class StockHistory(db.Model):
     note = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+# ==================== WHATSAPP STATUS AUTOMATION MODELS ====================
+
+class StatusSchedule(db.Model):
+    """Tracks scheduled status posts"""
+    id = db.Column(db.Integer, primary_key=True)
+    menu_item_id = db.Column(db.Integer, db.ForeignKey('menu_item.id'), nullable=False)
+    scheduled_time = db.Column(db.DateTime, nullable=False)
+    status_content = db.Column(db.Text)  # JSON string of generated content
+    is_posted = db.Column(db.Boolean, default=False)
+    posted_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    menu_item = db.relationship('MenuItem', backref='scheduled_posts')
+
+class WhatsAppStatusManager:
+    """Manages automated posting of menu items to WhatsApp Status"""
+    
+    def __init__(self):
+        self.emoji_map = {
+            'burger': '🍔', 'pizza': '🍕', 'pasta': '🍝', 'salad': '🥗',
+            'soda': '🥤', 'fries': '🍟', 'ice cream': '🍦', 'tea': '🍵',
+            'coffee': '☕', 'sandwich': '🥪', 'taco': '🌮', 'sushi': '🍣',
+            'ramen': '🍜', 'steak': '🥩', 'chicken': '🍗', 'fish': '🐟',
+            'dessert': '🍰', 'soup': '🍲', 'bread': '🍞', 'rice': '🍚'
+        }
+    
+    def generate_status_content(self, menu_item):
+        """Generate optimized content for WhatsApp Status"""
+        # Get appropriate emoji
+        item_lower = menu_item.name.lower()
+        emoji = menu_item.emoji or self.emoji_map.get(item_lower, '🍽️')
+        
+        # Create compelling caption (within WhatsApp Status character limits)
+        caption = f"{emoji} {menu_item.name} - ${menu_item.price}\n"
+        caption += "🔥 Fresh & Ready!\n"
+        caption += "👇 Order instantly\n"
+        caption += f"#FreshFood #OrderNow"
+        
+        # Generate deep link for ordering
+        deep_link = f"https://yourdomain.com/order-now/{menu_item.id}"  # Update with your actual domain
+        
+        return {
+            'image_url': f"/static/images/menu/{menu_item.name.lower().replace(' ', '_')}.jpg",
+            'caption': caption,
+            'deep_link': deep_link,
+            'hashtags': '#Food #Delivery #Fresh'
+        }
+    
+    def get_optimal_post_times(self):
+        """Return optimal times to post based on meal periods"""
+        return {
+            'breakfast': ['07:00', '08:00', '09:00'],
+            'lunch': ['11:00', '12:00', '13:00'],
+            'dinner': ['17:00', '18:00', '19:00'],
+            'snacks': ['15:00', '21:00']
+        }
+    
+    def categorize_menu_item(self, menu_item):
+        """Categorize menu item for timing optimization"""
+        breakfast_items = ['tea', 'coffee', 'bread', 'eggs', 'pancakes']
+        lunch_items = ['burger', 'pizza', 'pasta', 'salad', 'sandwich']
+        dinner_items = ['steak', 'pasta', 'fish', 'chicken', 'rice']
+        snack_items = ['fries', 'ice cream', 'soda']
+        
+        item_lower = menu_item.name.lower()
+        
+        if any(food in item_lower for food in breakfast_items):
+            return 'breakfast'
+        elif any(food in item_lower for food in lunch_items):
+            return 'lunch'
+        elif any(food in item_lower for food in dinner_items):
+            return 'dinner'
+        elif any(food in item_lower for food in snack_items):
+            return 'snacks'
+        else:
+            return 'lunch'  # default
+
+# Initialize the status manager
+whatsapp_manager = WhatsAppStatusManager()
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialization functions
+# ==================== FIX: DATABASE INITIALIZATION ====================
+
+def initialize_database():
+    """Initialize database tables and data"""
+    with app.app_context():
+        try:
+            print("🚀 Starting database initialization...")
+            
+            # Create all tables
+            db.create_all()
+            print("✅ Database tables created")
+            
+            # Initialize data only if tables are empty
+            if MenuItem.query.count() == 0:
+                print("📝 Initializing menu items...")
+                init_menu_items()
+            
+            if Ingredient.query.count() == 0:
+                print("🥬 Initializing ingredients...")
+                init_ingredients()
+            
+            if IngredientUsage.query.count() == 0:
+                print("🔗 Initializing ingredient usage...")
+                init_ingredient_usage()
+            
+            if not User.query.filter_by(email='kitchen@example.com').first():
+                print("👨‍🍳 Creating kitchen user...")
+                create_kitchen_user()
+            
+            if not User.query.filter_by(email='admin@example.com').first():
+                print("👨‍💼 Creating admin user...")
+                create_admin_user()
+                
+            print("🎉 Database initialization completed!")
+            
+        except Exception as e:
+            print(f"❌ Database error: {str(e)}")
+            import traceback
+            print(f"🔍 Full traceback: {traceback.format_exc()}")
+
+# Initialize database immediately
+print("🔄 Starting database setup...")
+initialize_database()
+print("✅ Database setup complete")
+
+# Flask-Admin to use a different path for CRUD operations
+admin = Admin(app, name='Database Admin', url='/database-admin')
+
+# Simple table viewer without auto-discovery first
+@app.route('/admin/tables')
+def show_tables():
+    try:
+        result = db.session.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'"))
+        tables = [row[0] for row in result]
+        return {'tables': tables}
+    except Exception as e:
+        return {'error': str(e)}
+
+# ==================== INITIALIZATION FUNCTIONS ====================
+
 def init_menu_items():
     if MenuItem.query.count() == 0:
         menu_items = [
@@ -230,71 +370,8 @@ def update_sales_and_inventory(order):
                     db.session.add(stock_history)
     db.session.commit()
 
-# ... your database models code ...
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-# ==================== FIX: DATABASE INITIALIZATION ====================
-
-def initialize_database():
-    """Initialize database tables and data"""
-    with app.app_context():
-        try:
-            print("🚀 Starting database initialization...")
-            
-            # Create all tables
-            db.create_all()
-            print("✅ Database tables created")
-            
-            # Initialize data only if tables are empty
-            if MenuItem.query.count() == 0:
-                print("📝 Initializing menu items...")
-                init_menu_items()
-            
-            if Ingredient.query.count() == 0:
-                print("🥬 Initializing ingredients...")
-                init_ingredients()
-            
-            if IngredientUsage.query.count() == 0:
-                print("🔗 Initializing ingredient usage...")
-                init_ingredient_usage()
-            
-            if not User.query.filter_by(email='kitchen@example.com').first():
-                print("👨‍🍳 Creating kitchen user...")
-                create_kitchen_user()
-            
-            if not User.query.filter_by(email='admin@example.com').first():
-                print("👨‍💼 Creating admin user...")
-                create_admin_user()
-                
-            print("🎉 Database initialization completed!")
-            
-        except Exception as e:
-            print(f"❌ Database error: {str(e)}")
-            import traceback
-            print(f"🔍 Full traceback: {traceback.format_exc()}")
-
-# Initialize database immediately
-print("🔄 Starting database setup...")
-initialize_database()
-print("✅ Database setup complete")
-
-# Flask-Admin to use a different path for CRUD operations
-admin = Admin(app, name='Database Admin', url='/database-admin')
-
-# Simple table viewer without auto-discovery first
-@app.route('/admin/tables')
-def show_tables():
-    try:
-        result = db.session.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'"))
-        tables = [row[0] for row in result]
-        return {'tables': tables}
-    except Exception as e:
-        return {'error': str(e)}
-
 # ==================== ROUTES ====================
+
 @app.route('/init')
 def init_route():
     """Manual initialization route"""
@@ -337,7 +414,7 @@ def debug_tables():
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
-# ==================== ROUTES ====================
+# ==================== MAIN APPLICATION ROUTES ====================
 
 @app.route('/')
 def index():
@@ -590,13 +667,6 @@ def kitchen_dashboard():
                          completed_orders=completed_orders,
                          statuses=statuses,
                          emojis=emojis)
-#@app.route('/kitchen')
-##def kitchen_dashboard():
-  #  if current_user.role not in ['kitchen', 'admin']:
-   #     flash('Access denied', 'danger')
-    #    return redirect(url_for('index'))
-    #orders = Order.query.filter(Order.status.in_(['pending', 'confirmed', 'preparing'])).order_by(Order.order_time.desc()).all()
-    #return render_template('kitchen.html', orders=orders)
 
 @app.route('/kitchen/order/<int:order_id>')
 @login_required
@@ -763,6 +833,180 @@ def ingredient_usage(menu_item_id):
                          usage_data=usage_data,
                          total_cost=total_cost)
 
+# ==================== WHATSAPP STATUS ROUTES ====================
+
+@app.route('/admin/whatsapp-status')
+@login_required
+def whatsapp_status_dashboard():
+    """Dashboard for managing WhatsApp Status automation"""
+    if current_user.role != 'admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('index'))
+    
+    # Get menu items available for scheduling
+    menu_items = MenuItem.query.filter_by(is_available=True).all()
+    
+    # Get scheduled posts
+    scheduled_posts = StatusSchedule.query.filter_by(is_posted=False)\
+        .order_by(StatusSchedule.scheduled_time.asc()).all()
+    
+    # Get recent posted statuses
+    recent_posts = StatusSchedule.query.filter_by(is_posted=True)\
+        .order_by(StatusSchedule.posted_at.desc()).limit(10).all()
+    
+    return render_template('whatsapp_status.html',
+                         menu_items=menu_items,
+                         scheduled_posts=scheduled_posts,
+                         recent_posts=recent_posts,
+                         whatsapp_manager=whatsapp_manager,
+                         datetime=datetime,
+                         timedelta=timedelta)
+
+@app.route('/admin/generate-status-content/<int:menu_item_id>')
+@login_required
+def generate_status_content(menu_item_id):
+    """Generate status content for a menu item"""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    menu_item = MenuItem.query.get_or_404(menu_item_id)
+    content = whatsapp_manager.generate_status_content(menu_item)
+    
+    return jsonify({
+        'success': True,
+        'content': content,
+        'preview_text': f"Preview for {menu_item.name}:",
+        'instructions': "Copy the text below and post to your WhatsApp Status with the product image"
+    })
+
+@app.route('/admin/schedule-status', methods=['POST'])
+@login_required
+def schedule_status():
+    """Schedule a menu item for WhatsApp Status posting"""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    menu_item_id = request.json.get('menu_item_id')
+    schedule_date = request.json.get('schedule_date')
+    schedule_time = request.json.get('schedule_time')
+    
+    menu_item = MenuItem.query.get_or_404(menu_item_id)
+    
+    # Combine date and time
+    scheduled_datetime = datetime.strptime(f"{schedule_date} {schedule_time}", "%Y-%m-%d %H:%M")
+    
+    # Generate content
+    content = whatsapp_manager.generate_status_content(menu_item)
+    
+    # Create schedule
+    schedule = StatusSchedule(
+        menu_item_id=menu_item.id,
+        scheduled_time=scheduled_datetime,
+        status_content=json.dumps(content)
+    )
+    
+    db.session.add(schedule)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'message': f"{menu_item.name} scheduled for {scheduled_datetime.strftime('%Y-%m-%d %H:%M')}"
+    })
+
+@app.route('/admin/auto-schedule-daily')
+@login_required
+def auto_schedule_daily():
+    """Automatically schedule daily menu items"""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        menu_items = MenuItem.query.filter_by(is_available=True).all()
+        scheduled_count = 0
+        
+        # Clear existing unscheduled posts
+        StatusSchedule.query.filter_by(is_posted=False).delete()
+        
+        for menu_item in menu_items:
+            category = whatsapp_manager.categorize_menu_item(menu_item)
+            optimal_times = whatsapp_manager.get_optimal_post_times()[category]
+            
+            for time_str in optimal_times[:2]:  # Schedule for 2 optimal times
+                # Schedule for tomorrow
+                scheduled_date = (datetime.now() + timedelta(days=1)).date()
+                scheduled_datetime = datetime.strptime(
+                    f"{scheduled_date} {time_str}", "%Y-%m-%d %H:%M"
+                )
+                
+                content = whatsapp_manager.generate_status_content(menu_item)
+                
+                schedule = StatusSchedule(
+                    menu_item_id=menu_item.id,
+                    scheduled_time=scheduled_datetime,
+                    status_content=json.dumps(content)
+                )
+                
+                db.session.add(schedule)
+                scheduled_count += 1
+        
+        db.session.commit()
+        
+        flash(f'Automatically scheduled {scheduled_count} posts for tomorrow!', 'success')
+        return redirect(url_for('whatsapp_status_dashboard'))
+    
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error scheduling posts: {str(e)}', 'danger')
+        return redirect(url_for('whatsapp_status_dashboard'))
+
+@app.route('/order-now/<int:menu_item_id>')
+def quick_order_page(menu_item_id):
+    """Quick order page for status links"""
+    menu_item = MenuItem.query.get_or_404(menu_item_id)
+    
+    if not current_user.is_authenticated:
+        flash('Please login to order', 'info')
+        session['redirect_after_login'] = url_for('quick_order_page', menu_item_id=menu_item_id)
+        return redirect(url_for('login'))
+    
+    # Add directly to cart and redirect to checkout
+    cart = session.get('cart', {})
+    cart[str(menu_item_id)] = 1
+    session['cart'] = cart
+    session.modified = True
+    
+    flash(f'Added {menu_item.name} to cart!', 'success')
+    return redirect(url_for('checkout'))
+
+@app.route('/api/check-scheduled-posts')
+@login_required
+def check_scheduled_posts():
+    """Check for posts that are due (for automation)"""
+    if current_user.role != 'admin':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    now = datetime.now()
+    due_posts = StatusSchedule.query.filter(
+        StatusSchedule.scheduled_time <= now,
+        StatusSchedule.is_posted == False
+    ).all()
+    
+    posts_data = []
+    for post in due_posts:
+        content = json.loads(post.status_content)
+        posts_data.append({
+            'id': post.id,
+            'menu_item': post.menu_item.name,
+            'content': content,
+            'scheduled_time': post.scheduled_time.isoformat()
+        })
+    
+    return jsonify({
+        'success': True,
+        'due_posts': posts_data,
+        'due_count': len(due_posts)
+    })
+
 # ==================== DEBUG ROUTES ====================
 
 @app.route('/debug-database')
@@ -800,7 +1044,7 @@ def debug_templates():
         return {'templates_exist': False, 'error': 'Templates directory not found'}
     
     template_files = os.listdir(templates_dir)
-    required_templates = ['index.html', 'return_on_plate.html', 'inventory.html']
+    required_templates = ['index.html', 'return_on_plate.html', 'inventory.html', 'whatsapp_status.html']
     missing_templates = [t for t in required_templates if t not in template_files]
     
     return {
@@ -829,5 +1073,3 @@ if __name__ == '__main__':
     # Database is already initialized above
     port = int(os.environ.get('PORT', 5000))
     print(f"🚀 Starting Flask app on port {port}...")
-    app.run(host='0.0.0.0', port=port, debug=False)
-

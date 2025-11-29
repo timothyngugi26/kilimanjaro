@@ -30,10 +30,12 @@
                             <a class="nav-link" href="{{ url_for('inventory_management') }}">
                                 <i class="fas fa-boxes me-1"></i>Inventory
                             </a>
-                            <!-- a class="nav-link" href="{{ url_for('admin_dashboard') }}" 
-                                <i class="fas fa-tachometer-alt me-1"></i>Admin -->
+                            <!-- WhatsApp Status Link - ADDED HERE -->
+                            <a class="nav-link" href="{{ url_for('whatsapp_status_dashboard') }}">
+                                <i class="fab fa-whatsapp me-1"></i>WhatsApp Status
+                            </a>
                             <a class="nav-link" href="/database-admin">
-                            <i class="fas fa-tachometer-alt me-1"></i>Database Admin</a>
+                                <i class="fas fa-tachometer-alt me-1"></i>Database Admin
                             </a>
                         {% endif %}
                         
